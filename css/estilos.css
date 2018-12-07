@@ -1,0 +1,156 @@
+@font-face {
+  font-family: gameFont;
+  src: url('../fonts/PressStart2P.ttf');
+}
+
+*{
+  box-sizing: border-box;
+}
+
+body{
+  background-image: url('../image/background.jpg');
+  background-size: cover;
+  overflow: hidden;
+}
+
+.main-container{
+  width: 90%;
+  margin: 0 auto;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: space-between;
+  height: 100vh !important;
+}
+
+.main-titulo{
+  font-family: gameFont;
+  font-size: 3em;
+  color: #DCFF0E;
+  width: 65%;
+  height: 8vh;
+  margin-bottom: 0;
+  justify-content: center;
+  text-align: center;
+  animation-name: kf-brightness;
+  animation-fill-mode: backwards;
+  animation-iteration-count: infinite;
+  animation-direction: alternate-reverse;
+  animation-duration: 2.5s;
+}
+
+.panel-tablero{
+  width: 65%;
+  border: 10px solid #E87306;
+  background: rgba(232, 115, 6, 0.5);
+  border-radius: 5px;
+  height: 75vh;
+  display: flex;
+  flex-flow: row wrap;
+}
+
+.panel-score{
+  width: 25%;
+  height: 75vh;
+  display: flex;
+  flex-flow: column nowrap;
+  justify-content: space-between;
+}
+
+.score, .moves, .time{
+  text-align: center;
+  height: 20%;
+  width: 100%;
+  border: 10px solid #E87306;
+  border-radius: 5px;
+  background: rgba(232, 115, 6, 0.5);
+}
+
+.buttons{
+  height: 10%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.data-titulo, .data-info{
+  font-family: gameFont;
+  color: #E8CA06;
+}
+
+.data-titulo{
+  margin: 1.5vh 0 !important;
+  font-size: 1.5em;
+}
+.data-info{
+  font-size: 1.4em;
+}
+
+.titulo-over{
+  font-family: gameFont;
+  font-size: 3em;
+  text-align: center;
+  color: #DCFF0E;
+}
+.btn-reinicio{
+  background: #E8CA06;
+  border: 6px solid #FFB206;
+  border-radius: 5px;
+  font-family: gameFont;
+  font-size: 1.2em;
+  color: #FF4007;
+}
+.btn-reinicio:hover{
+  color: #fff;
+  cursor: pointer;
+}
+.btn-reinicio:active{
+  font-size: 1em;
+}
+
+.candy-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-basis: content;
+  flex-direction: column;
+  flex-flow: column wrap;
+  flex-shrink: 7;
+  flex-grow: 7;
+}
+
+.candy {
+  width: 10%;
+  height: 11.29%;
+  margin: 1vh .8vw !important;
+  animation-name: kf-ZoomIn;
+  animation-duration: 1.5s;
+  animation-fill-mode: backwards;
+  transition: transform .1s;
+}
+
+.candy-hover {
+  transform: scale(.5);
+}
+
+@keyframes kf-brightness {
+  0% {
+    color: rgb(255, 255, 255);
+  }
+  40% {
+    color: #DCFF0E;
+  }
+  70% {
+    color: rgb(130, 133, 2);
+  }
+  100% {
+    color: rgb(255, 191, 14);
+  }
+}
+@keyframes kf-ZoomIn {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
