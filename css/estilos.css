@@ -2,21 +2,14 @@
   font-family: gameFont;
   src: url('../fonts/PressStart2P.ttf');
 }
-
 *{
   box-sizing: border-box;
 }
-
 body{
   background-image: url('../image/background.jpg');
   background-size: cover;
   overflow: hidden;
 }
-
-div[number='1'] > .candy {
-  
-}
-
 div[class^='col-'] {
   display: inline-flex;
   flex-direction: column;
@@ -24,7 +17,6 @@ div[class^='col-'] {
   height: 100%;
   width: 14.28571428571429%;
 }
-
 .main-container{
   width: 90%;
   margin: 0 auto;
@@ -33,7 +25,6 @@ div[class^='col-'] {
   justify-content: space-between;
   height: 100vh !important;
 }
-
 .main-titulo{
   font-family: gameFont;
   font-size: 3em;
@@ -49,7 +40,6 @@ div[class^='col-'] {
   animation-direction: alternate-reverse;
   animation-duration: 2.5s;
 }
-
 .panel-tablero{
   width: 65%;
   border: 10px solid #E87306;
@@ -59,7 +49,6 @@ div[class^='col-'] {
   display: flex;
   flex-flow: row wrap;
 }
-
 .panel-score{
   width: 25%;
   height: 75vh;
@@ -67,7 +56,6 @@ div[class^='col-'] {
   flex-flow: column nowrap;
   justify-content: space-between;
 }
-
 .score, .moves, .time{
   text-align: center;
   height: 20%;
@@ -76,19 +64,16 @@ div[class^='col-'] {
   border-radius: 5px;
   background: rgba(232, 115, 6, 0.5);
 }
-
 .buttons{
   height: 10%;
   width: 100%;
   display: flex;
   justify-content: center;
 }
-
 .data-titulo, .data-info{
   font-family: gameFont;
   color: #E8CA06;
 }
-
 .data-titulo{
   margin: 1.5vh 0 !important;
   font-size: 1.5em;
@@ -96,7 +81,6 @@ div[class^='col-'] {
 .data-info{
   font-size: 1.4em;
 }
-
 .titulo-over{
   font-family: gameFont;
   font-size: 3em;
@@ -118,12 +102,10 @@ div[class^='col-'] {
 .btn-reinicio:active{
   font-size: 1em;
 }
-
 .candy-content {
   width: 100%;
   height: 100%;
 }
-
 .candy {
   position: relative;
   width: 80%;
@@ -133,6 +115,13 @@ div[class^='col-'] {
   animation-duration: 1.5s;
   animation-fill-mode: backwards;
   transition: transform .8s;
+}
+.destroyCandy {
+  animation-name: kf-destroying;
+  animation-duration: 2.5s;
+  animation-fill-mode: backwards;
+  animation-delay: .5s;
+  opacity: 0;
 }
 
 @keyframes kf-brightness {
@@ -157,5 +146,47 @@ div[class^='col-'] {
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+@keyframes kf-destroying {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  10% {
+    opacity: .1;
+    transform: scale(1);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  30% {
+    opacity: .1;
+    transform: scale(1);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: .1;
+    transform: scale(1);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  70% {
+    opacity: .1;
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0);
   }
 }

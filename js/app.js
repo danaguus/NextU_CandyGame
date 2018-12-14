@@ -1,3 +1,4 @@
+const COL=0, ROW=1;
 var limitRows = 7, limitColums = 7, CandyPoints = 3;
 var _candySize = {
     _top: undefined,
@@ -5,14 +6,6 @@ var _candySize = {
     _bottom: undefined,
     _left: undefined,
     _captured: false
-}
-var _positionFirst = {
-    _top: undefined,
-    _left: undefined
-}
-var _positionLast = {
-    _top: undefined,
-    _left: undefined
 }
 
 function GetRandomNumber(star, end) {
@@ -37,16 +30,26 @@ function captureCandySize() {
         _candySize._captured = true;
     }
 }
+function GetRandomCandy(colClass) {
+    var col = parseInt($(colClass).attr("number"));
+    var row = parseInt($(colClass+">.candy").toArray().length)+1;
+    var newCandyTag = "<img class='candy' src='image/" + GetRandomNumber(1, 5).toString() + ".png' />";
+    var candyTag = $(newCandyTag).appendTo($(colClass));
+    $(candyTag).attr("cell", col.toString() + row.toString());
+    captureCandySize();
+    $(candyTag).draggable({
+        snap: ".candy",
+        snapMode: "inner",
+        snapTolerance: (_candySize._left/2),
+        stack: ".candy"
+    });
+    $(candyTag).droppable({
+        accept: ".candy",
+        drop: Drop
+    });
 
-function DragStart(event, ui) {
-    _positionFirst._top     = $(ui.helper).position().top;
-    _positionFirst._left    = $(ui.helper).position().left;
+    return candyTag;
 }
-function DropOver(event, ui) {
-    _positionLast._top     = $(event.target).position().top;
-    _positionLast._left    = $(event.target).position().left;
-}
-
 function ApplyAnimationHorizontal(candyElem, orientation, multiply) {
     $(candyElem).animate({
         left: orientation + "=" + (parseFloat(orientation == "+" ? _candySize._left : _candySize._right) * multiply).toString() + "px"
@@ -65,13 +68,12 @@ function ApplyAnimationVertical(candyElem, orientation, multiply) {
     });
     return true;
 }
-
 function Drop(event, ui) {
     var Dragged = $(ui.helper), Dropping = $(event.target);
     var accepted = false;
 
-    var rowFrom = parseInt($(Dragged).attr("row")), rowTo = parseInt($(Dropping).attr("row"));
-    var colFrom = parseInt($(Dragged).attr("col")), colTo = parseInt($(Dropping).attr("col"));
+    var rowFrom = parseInt($(Dragged).attr("cell").substring(ROW,ROW+1)), rowTo = parseInt($(Dropping).attr("cell").substring(ROW,ROW+1));
+    var colFrom = parseInt($(Dragged).attr("cell").substring(COL,COL+1)), colTo = parseInt($(Dropping).attr("cell").substring(COL,COL+1));
 
     if ( rowFrom == rowTo ) {
         if ( colFrom == (colTo-1)) {
@@ -102,74 +104,107 @@ function Drop(event, ui) {
     }
 
     if ( accepted ) {
-        $(Dragged).attr("row", rowTo);
-        $(Dragged).attr("col", colTo);
-        $(Dropping).attr("row", rowFrom);
-        $(Dropping).attr("col", colFrom);
+        $(Dragged).attr("cell", (colTo.toString() + rowTo.toString()));
+        $(Dropping).attr("cell", (colFrom.toString() + rowFrom.toString()));
     }
 }
 function ExtracImageName(src) {
     var pos = src.search(".png");
     return src.substring(pos-1, pos);
 }
-function EvaluateRows(column) {
-    var col = $(column).attr("number").toString();
-    $("div[number='" + col + "']>.candy").toArray().forEach(candy => {
-        var name = ExtracImageName(candy.src);
-        var row = $(candy).attr("row");
+function EvaluateCandyDirection(type, col, row, isVertical, operator) {
+    var cont=1, nextObject, othersType;
 
-        
-
-    });
-}
-function EvaluateCandys() {
-    $("div[class^='col-'").toArray().forEach(column => {
-        EvaluateRows(column);
-    });
+    do {
+        if (!isVertical) {
+            col = ( (operator == "+")? (col+1) : (col-1) );
+        } else {
+            row = ( (operator == "+")? (row+1) : (row-1) );
+        }
+        nextObject = $(".candy[cell='" + col.toString() + row.toString() + "'");
+        if ( $(nextObject).length != 0 ) {
+            othersType = ExtracImageName($(nextObject).attr("src").toString());
+            if ( othersType == type ) {
+                cont++;
+                if (cont>=3) { return true; }
+            } else { break; }
+        } else { break; }
+    } while ($(nextObject).length != 0);
 
     return false;
 }
+function EvaluateCandyInMiddle(type, col, row, isVertical) {
+    var prevObject = $(".candy[cell='" + (isVertical? ( (col-1).toString() + row.toString() ) : ( col.toString() + (row-1).toString() ) ).toString() + "']"),
+        nextObject = $(".candy[cell='" + (isVertical? ( (col+1).toString() + row.toString() ) : ( col.toString() + (row+1).toString() ) ).toString() + "']");
 
-function BeginPlay() {
+    if ( ( $(prevObject).length != 0 ) && ( $(nextObject).length != 0 ) ) {
+        var typePrev = ExtracImageName($(prevObject).attr("src").toString()), 
+            typeNext = ExtracImageName($(nextObject).attr("src").toString());
+
+        if ( ( typePrev == type ) && ( typeNext == type ) ) { return true; }
+    }
+
+    return false;
+}
+function EvaluateCandyDroping(candy, col, row) {
+    var type = ExtracImageName($(candy).attr("src").toString());
+
+//  Evaluamos los dulces hacía arriba del actual para determinar si tiene al menos dos iguales.
+    if ( EvaluateCandyDirection(type, col, row, true, "-") ) { return true; }
+//  Evaluamos los dulces hacía abajo del actual para determinar si tiene al menos dos iguales.
+    if ( EvaluateCandyDirection(type, col, row, true, "+") ) { return true; }
+//  Evaluamos los dulces hacía la izquierda del actual para determinar si tiene al menos dos iguales.
+    if ( EvaluateCandyDirection(type, col, row, false, "-") ) { return true; }
+//  Evaluamos los dulces hacía la derecha del actual para determinar si tiene al menos dos iguales.
+    if ( EvaluateCandyDirection(type, col, row, false, "+") ) { return true; }
+
+//  Evaluamos si el dulce actual se encuentra en medio de al menos dos identicos en orientación vertical
+    if ( EvaluateCandyInMiddle(type, col, row, true) ) { return true; }
+//  Evaluamos si el dulce actual se encuentra en medio de al menos dos identicos en orientación horizontal
+    if ( EvaluateCandyInMiddle(type, col, row, false) ) { return true; }
+
+    return false;
+}
+function EvaluateCandys() {
+    var col=1;
+    while ( col <= limitColums ) {
+        var row=1;
+        while( row <= limitRows ) {
+            var candy = $(".candy[cell='" + col.toString() + row.toString() + "']");
+            if ( EvaluateCandyDroping(candy, col, row) ) { $(candy).addClass("destroyCandy"); }
+            row++;
+        }
+        col++;
+    }
+
+    return false;
+}
+function BeginPlay(callBack) {
     var col = 1;
     $(".candy-content").empty();
     while ( col <= limitColums ) {
-        var row = 1;
         var delay = limitRows;
         var classCurrentCol = ".col-" + col.toString();
         var colTag = "<div class='" + classCurrentCol.toString().substring(1, classCurrentCol.length) + "' number='" + col.toString() + "'></div>";
         $(colTag).appendTo($(".candy-content"));
         while( $(classCurrentCol)[0].children.length < limitRows ) {
-            var newCandyTag = "<img class='candy' src='image/" + GetRandomNumber(1, 5).toString() + ".png' />";
-            var candyTag = $(newCandyTag).appendTo($(classCurrentCol));
+            var candyTag = GetRandomCandy(classCurrentCol);
             $(candyTag).css("animation-delay", "." + delay.toString() + "s");
-            $(candyTag).attr("row", row.toString());
-            $(candyTag).attr("col", col.toString());
-            captureCandySize();
-            $(candyTag).draggable({
-                snap: ".candy",
-                snapMode: "inner",
-                snapTolerance: (_candySize._left/2),
-                stack: ".candy",
-                start: DragStart
-            });
-            $(candyTag).droppable({
-                accept: ".candy",
-                over: DropOver,
-                drop: Drop
-            });
-            row++;
             delay--;
         }
         col++;
     }
+
+    var interval = setInterval(function() {
+        callBack();
+        clearInterval(interval);
+    }, 2000);
 }
 
 $(document).ready(function() {
     $(".btn-reinicio").on("click", function(){
         $(this).text("Reiniciar");
         _candySize._captured = false;
-        BeginPlay();
-        EvaluateCandys();
+        BeginPlay(EvaluateCandys);
     });
 });
