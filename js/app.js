@@ -1,5 +1,5 @@
 const COL=0, ROW=1;
-var limitRows = 7, limitColums = 7, CandyPoints = 3;
+var limitRows = 7, limitColums = 7, CandyPoints = 0, MoveCount = 0;
 var _candySize = {
     _top: undefined,
     _right: undefined,
@@ -30,13 +30,14 @@ function captureCandySize() {
         _candySize._captured = true;
     }
 }
-function GetRandomCandy(colClass) {
+function GetRandomCandy(colClass, isPrepend) {
     var col = parseInt($(colClass).attr("number"));
     var row = parseInt($(colClass+">.candy").toArray().length)+1;
     var newCandyTag = "<img class='candy' src='image/" + GetRandomNumber(1, 5).toString() + ".png' />";
-    var candyTag = $(newCandyTag).appendTo($(colClass));
+    var candyTag = isPrepend? $(newCandyTag).prependTo($(colClass)) : $(newCandyTag).appendTo($(colClass));
     $(candyTag).attr("cell", col.toString() + row.toString());
-    captureCandySize();
+    captureCandySize()
+    ;
     $(candyTag).draggable({
         snap: ".candy",
         snapMode: "inner",
@@ -106,6 +107,26 @@ function Drop(event, ui) {
     if ( accepted ) {
         $(Dragged).attr("cell", (colTo.toString() + rowTo.toString()));
         $(Dropping).attr("cell", (colFrom.toString() + rowFrom.toString()));
+
+        TimerCandy(function() {
+            if ( EvaluateCandyDroping(Dragged, colTo, rowTo) || EvaluateCandyDroping(Dropping, colFrom, rowFrom) ) {
+                MoveCount++;
+                $("#movimientos-text").text(MoveCount.toString());
+                TimerCandy(EvaluateCandys, 2800);
+            } else {
+                $(Dragged).attr("cell", (colFrom.toString() + rowFrom.toString()));
+                $(Dropping).attr("cell", (colTo.toString() + rowTo.toString()));
+    
+                if ( rowFrom == rowTo ) {
+                    ApplyAnimationHorizontal(Dragged, ( colFrom == (colTo-1) ) ? "-" : "+", 1);
+                    ApplyAnimationHorizontal(Dropping, ( colFrom == (colTo-1) ) ? "+" : "-", 1);
+                } else {
+                    ApplyAnimationVertical(Dragged, ( rowFrom == (rowTo-1) ) ? "-" : "+", 1);
+                    ApplyAnimationVertical(Dropping, ( rowFrom == (rowTo-1) ) ? "+" : "-", 1);
+                }
+            }
+            return false;
+        }, 250);
     }
 }
 function ExtracImageName(src) {
@@ -166,44 +187,85 @@ function EvaluateCandyDroping(candy, col, row) {
     return false;
 }
 function EvaluateCandys() {
-    var col=1;
+    var col=1, candysDestroying;
     while ( col <= limitColums ) {
         var row=1;
         while( row <= limitRows ) {
             var candy = $(".candy[cell='" + col.toString() + row.toString() + "']");
+            $(candy).css("animation-delay", "0s");
             if ( EvaluateCandyDroping(candy, col, row) ) { $(candy).addClass("destroyCandy"); }
             row++;
         }
         col++;
     }
 
-    return false;
+    TimerCandy(RemoveAndCompleteCandys, 2000);
+
+    candysDestroying = $(".destroyCandy").length;
+
+    CandyPoints += (candysDestroying * 3);
+
+    $("#score-text").text(CandyPoints.toString());
+
+    return (candysDestroying > 0);
 }
-function BeginPlay(callBack) {
+function FillColumnWithCandys(column) {
+    var col = $(column).attr("number").toString();
+    var classCol = ".col-" + col.toString();
+    var currCandys = $(".candy[cell^='" + col.toString() + "']:not(.destroyCandy)").toArray();
+    var _Moving = parseInt(currCandys.length)-1;
+    var _toCreate = (limitRows - (parseInt(_Moving) + 1));
+    var currRow = limitRows;
+
+    for (let row = _Moving; row >= 0; row--) {
+        $(currCandys[row]).attr("cell", col.toString() + currRow.toString());
+        currRow--;
+    }
+    var delay = 1;
+    for (let newRow = _toCreate; newRow >= 1; newRow--) {
+        GetRandomCandy(classCol, true).attr("cell", col.toString() + newRow.toString()).css("animation-delay", "." + delay.toString() + "s");
+        delay++;
+    }
+}
+function RemoveAndCompleteCandys() {
+    $("div[class^='col']").toArray().forEach(column => {
+        if ( $(".candy[cell^='" + $(column).attr("number").toString() + "']:not(.destroyCandy)").toArray().length < limitRows ) {
+            FillColumnWithCandys(column);
+            $(".candy[cell^='" + $(column).attr("number").toString() + "'].destroyCandy").remove();
+        }
+    });
+}
+function TimerCandy(call, milliseconds) {
+    var wait = setInterval(function() {
+        if ( !call() ) clearInterval(wait);
+    }, milliseconds);
+}
+async function BeginPlay(callBack) {
     var col = 1;
     $(".candy-content").empty();
     while ( col <= limitColums ) {
         var delay = limitRows;
         var classCurrentCol = ".col-" + col.toString();
-        var colTag = "<div class='" + classCurrentCol.toString().substring(1, classCurrentCol.length) + "' number='" + col.toString() + "'></div>";
+        var colTag = "<div class='" + classCurrentCol.substring(1, classCurrentCol.length) + "' number='" + col.toString() + "'></div>";
         $(colTag).appendTo($(".candy-content"));
         while( $(classCurrentCol)[0].children.length < limitRows ) {
-            var candyTag = GetRandomCandy(classCurrentCol);
+            var candyTag = GetRandomCandy(classCurrentCol, false);
             $(candyTag).css("animation-delay", "." + delay.toString() + "s");
             delay--;
         }
         col++;
     }
 
-    var interval = setInterval(function() {
-        callBack();
-        clearInterval(interval);
-    }, 2000);
+    TimerCandy(callBack, 2800);
 }
 
 $(document).ready(function() {
-    $(".btn-reinicio").on("click", function(){
+    $(".btn-reinicio").on("click", function() {
         $(this).text("Reiniciar");
+        CandyPoints = 0;
+        MoveCount = 0;
+        $("#score-text").text(CandyPoints.toString());
+        $("#movimientos-text").text(MoveCount.toString());
         _candySize._captured = false;
         BeginPlay(EvaluateCandys);
     });
