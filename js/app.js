@@ -69,66 +69,6 @@ function ApplyAnimationVertical(candyElem, orientation, multiply) {
     });
     return true;
 }
-function Drop(event, ui) {
-    var Dragged = $(ui.helper), Dropping = $(event.target);
-    var accepted = false;
-
-    var rowFrom = parseInt($(Dragged).attr("cell").substring(ROW,ROW+1)), rowTo = parseInt($(Dropping).attr("cell").substring(ROW,ROW+1));
-    var colFrom = parseInt($(Dragged).attr("cell").substring(COL,COL+1)), colTo = parseInt($(Dropping).attr("cell").substring(COL,COL+1));
-
-    if ( rowFrom == rowTo ) {
-        if ( colFrom == (colTo-1)) {
-            accepted = ApplyAnimationHorizontal(Dropping, "-", 1);
-        } else if (colFrom == (colTo+1)) {
-            accepted = ApplyAnimationHorizontal(Dropping, "+", 1);
-        } else {
-            ApplyAnimationHorizontal(Dragged, colFrom > colTo ? "+" : "-", colFrom > colTo ? (colFrom-colTo) : (colTo-colFrom));
-        }
-    } else if ( colFrom == colTo ) {
-        if ( rowFrom == (rowTo-1)) {
-            accepted = ApplyAnimationVertical(Dropping, "-", 1);
-        } else if (rowFrom == (rowTo+1)) {
-            accepted = ApplyAnimationVertical(Dropping, "+", 1);
-        } else {
-            ApplyAnimationVertical(Dragged, rowFrom > rowTo ? "+" : "-", rowFrom > rowTo ? (rowFrom-rowTo) : (rowTo-rowFrom));
-        }
-    } else {
-        $(Dragged).animate({
-            top: (rowFrom > rowTo ? "+" : "-") + "=" + (parseFloat(rowFrom > rowTo ? _candySize._top : _candySize._bottom) * 
-                    (rowFrom > rowTo ? (rowFrom-rowTo) : (rowTo-rowFrom))).toString() + "px",
-            left: (colFrom > colTo ? "+" : "-") + "=" + (parseFloat(colFrom > colTo ? _candySize._left : _candySize._right) * 
-                    (colFrom > colTo ? (colFrom-colTo) : (colTo-colFrom))).toString() + "px"
-        },{
-            duration: 500,
-            easing: "swing"
-        });
-    }
-
-    if ( accepted ) {
-        $(Dragged).attr("cell", (colTo.toString() + rowTo.toString()));
-        $(Dropping).attr("cell", (colFrom.toString() + rowFrom.toString()));
-
-        TimerCandy(function() {
-            if ( EvaluateCandyDroping(Dragged, colTo, rowTo) || EvaluateCandyDroping(Dropping, colFrom, rowFrom) ) {
-                MoveCount++;
-                $("#movimientos-text").text(MoveCount.toString());
-                TimerCandy(EvaluateCandys, 2800);
-            } else {
-                $(Dragged).attr("cell", (colFrom.toString() + rowFrom.toString()));
-                $(Dropping).attr("cell", (colTo.toString() + rowTo.toString()));
-    
-                if ( rowFrom == rowTo ) {
-                    ApplyAnimationHorizontal(Dragged, ( colFrom == (colTo-1) ) ? "-" : "+", 1);
-                    ApplyAnimationHorizontal(Dropping, ( colFrom == (colTo-1) ) ? "+" : "-", 1);
-                } else {
-                    ApplyAnimationVertical(Dragged, ( rowFrom == (rowTo-1) ) ? "-" : "+", 1);
-                    ApplyAnimationVertical(Dropping, ( rowFrom == (rowTo-1) ) ? "+" : "-", 1);
-                }
-            }
-            return false;
-        }, 250);
-    }
-}
 function ExtracImageName(src) {
     var pos = src.search(".png");
     return src.substring(pos-1, pos);
@@ -186,31 +126,7 @@ function EvaluateCandyDroping(candy, col, row) {
 
     return false;
 }
-function EvaluateCandys() {
-    var col=1, candysDestroying;
-    while ( col <= limitColums ) {
-        var row=1;
-        while( row <= limitRows ) {
-            var candy = $(".candy[cell='" + col.toString() + row.toString() + "']");
-            $(candy).css("animation-delay", "0s");
-            if ( EvaluateCandyDroping(candy, col, row) ) { $(candy).addClass("destroyCandy"); }
-            row++;
-        }
-        col++;
-    }
-
-    TimerCandy(RemoveAndCompleteCandys, 2000);
-
-    candysDestroying = $(".destroyCandy").length;
-
-    CandyPoints += (candysDestroying * 3);
-
-    $("#score-text").text(CandyPoints.toString());
-
-    return (candysDestroying > 0);
-}
-function FillColumnWithCandys(column) {
-    var col = $(column).attr("number").toString();
+function FillColumnWithCandys(col) {
     var classCol = ".col-" + col.toString();
     var currCandys = $(".candy[cell^='" + col.toString() + "']:not(.destroyCandy)").toArray();
     var _Moving = parseInt(currCandys.length)-1;
@@ -228,19 +144,14 @@ function FillColumnWithCandys(column) {
     }
 }
 function RemoveAndCompleteCandys() {
-    $("div[class^='col']").toArray().forEach(column => {
-        if ( $(".candy[cell^='" + $(column).attr("number").toString() + "']:not(.destroyCandy)").toArray().length < limitRows ) {
-            FillColumnWithCandys(column);
-            $(".candy[cell^='" + $(column).attr("number").toString() + "'].destroyCandy").remove();
+    for (let col = 1; col <= limitColums; col++) {
+        if ( $(".candy[cell^='" + col.toString() + "']:not(.destroyCandy)").toArray().length < limitRows ) {
+            FillColumnWithCandys(col);
+            $(".candy[cell^='" + col.toString() + "'].destroyCandy").remove();
         }
-    });
+    }
 }
-function TimerCandy(call, milliseconds) {
-    var wait = setInterval(function() {
-        if ( !call() ) clearInterval(wait);
-    }, milliseconds);
-}
-async function BeginPlay(callBack) {
+function BeginPlay(callBack) {
     var col = 1;
     $(".candy-content").empty();
     while ( col <= limitColums ) {
@@ -256,7 +167,107 @@ async function BeginPlay(callBack) {
         col++;
     }
 
-    TimerCandy(callBack, 2800);
+    TimerCandy(callBack, 1, true);
+}
+function Waiting(seconds) {
+    return new Promise(resolve => {
+        setTimeout(() => {
+          resolve(true);
+        }, parseInt(seconds*1000));
+      });
+}
+function _parseToPromise(value) {
+    return new Promise(resolve => { resolve( (value == undefined || value == null) ? true : value ); });
+}
+
+async function Drop(event, ui) {
+    var Dragged = $(ui.helper), Dropping = $(event.target);
+    var accepted = false;
+
+    var rowFrom = parseInt($(Dragged).attr("cell").substring(ROW,ROW+1)), rowTo = parseInt($(Dropping).attr("cell").substring(ROW,ROW+1));
+    var colFrom = parseInt($(Dragged).attr("cell").substring(COL,COL+1)), colTo = parseInt($(Dropping).attr("cell").substring(COL,COL+1));
+
+    if ( rowFrom == rowTo ) {
+        if ( colFrom == (colTo-1)) {
+            accepted = ApplyAnimationHorizontal(Dropping, "-", 1);
+        } else if (colFrom == (colTo+1)) {
+            accepted = ApplyAnimationHorizontal(Dropping, "+", 1);
+        } else {
+            ApplyAnimationHorizontal(Dragged, colFrom > colTo ? "+" : "-", colFrom > colTo ? (colFrom-colTo) : (colTo-colFrom));
+        }
+    } else if ( colFrom == colTo ) {
+        if ( rowFrom == (rowTo-1)) {
+            accepted = ApplyAnimationVertical(Dropping, "-", 1);
+        } else if (rowFrom == (rowTo+1)) {
+            accepted = ApplyAnimationVertical(Dropping, "+", 1);
+        } else {
+            ApplyAnimationVertical(Dragged, rowFrom > rowTo ? "+" : "-", rowFrom > rowTo ? (rowFrom-rowTo) : (rowTo-rowFrom));
+        }
+    } else {
+        $(Dragged).animate({
+            top: (rowFrom > rowTo ? "+" : "-") + "=" + (parseFloat(rowFrom > rowTo ? _candySize._top : _candySize._bottom) * 
+                    (rowFrom > rowTo ? (rowFrom-rowTo) : (rowTo-rowFrom))).toString() + "px",
+            left: (colFrom > colTo ? "+" : "-") + "=" + (parseFloat(colFrom > colTo ? _candySize._left : _candySize._right) * 
+                    (colFrom > colTo ? (colFrom-colTo) : (colTo-colFrom))).toString() + "px"
+        },{
+            duration: 500,
+            easing: "swing"
+        });
+    }
+
+    if ( accepted ) {
+        $(Dragged).attr("cell", (colTo.toString() + rowTo.toString()));
+        $(Dropping).attr("cell", (colFrom.toString() + rowFrom.toString()));
+
+        if ( await _parseToPromise(EvaluateCandyDroping(Dragged, colTo, rowTo)) || 
+             await _parseToPromise(EvaluateCandyDroping(Dropping, colFrom, rowFrom)) ) {
+            await Waiting(.3);
+            MoveCount++;
+            $("#movimientos-text").text(MoveCount.toString());
+            TimerCandy(EvaluateCandys, .5, true);
+        } else {
+            $(Dragged).attr("cell", (colFrom.toString() + rowFrom.toString()));
+            $(Dropping).attr("cell", (colTo.toString() + rowTo.toString()));
+
+            if ( rowFrom == rowTo ) {
+                ApplyAnimationHorizontal(Dragged, ( colFrom == (colTo-1) ) ? "-" : "+", 1);
+                ApplyAnimationHorizontal(Dropping, ( colFrom == (colTo-1) ) ? "+" : "-", 1);
+            } else {
+                ApplyAnimationVertical(Dragged, ( rowFrom == (rowTo-1) ) ? "-" : "+", 1);
+                ApplyAnimationVertical(Dropping, ( rowFrom == (rowTo-1) ) ? "+" : "-", 1);
+            }
+        }
+    }
+}
+async function TimerCandy(callFunc, seconds, awaitFirst) {
+    if ( awaitFirst ) await Waiting(seconds);
+    while (await _parseToPromise(callFunc())) {
+        await Waiting(seconds);
+    }
+}
+async function EvaluateCandys() {
+    var col=1, candysDestroying;
+    while ( col <= limitColums ) {
+        var row=1;
+        while( row <= limitRows ) {
+            var candy = $(".candy[cell='" + col.toString() + row.toString() + "']");
+            $(candy).css("animation-delay", "0s");
+            if ( await _parseToPromise(EvaluateCandyDroping(candy, col, row)) ) { $(candy).addClass("destroyCandy"); }
+            row++;
+        }
+        col++;
+    }
+
+    candysDestroying = $(".destroyCandy").length;
+
+    await Waiting(1.7);
+    await _parseToPromise(RemoveAndCompleteCandys());
+
+    CandyPoints += (candysDestroying * 3);
+
+    $("#score-text").text(CandyPoints.toString());
+
+    return (candysDestroying > 0);
 }
 
 $(document).ready(function() {
