@@ -128,7 +128,7 @@ function EvaluateCandyDroping(candy, col, row) {
 }
 function FillColumnWithCandys(col) {
     var classCol = ".col-" + col.toString();
-    var currCandys = $(".candy[cell^='" + col.toString() + "']:not(.destroyCandy)").toArray();
+    var currCandys = $(".candy[cell^='" + col.toString() + "']").toArray();
     var _Moving = parseInt(currCandys.length)-1;
     var _toCreate = (limitRows - (parseInt(_Moving) + 1));
     var currRow = limitRows;
@@ -141,14 +141,6 @@ function FillColumnWithCandys(col) {
     for (let newRow = _toCreate; newRow >= 1; newRow--) {
         GetRandomCandy(classCol, true).attr("cell", col.toString() + newRow.toString()).css("animation-delay", "." + delay.toString() + "s");
         delay++;
-    }
-}
-function RemoveAndCompleteCandys() {
-    for (let col = 1; col <= limitColums; col++) {
-        if ( $(".candy[cell^='" + col.toString() + "']:not(.destroyCandy)").toArray().length < limitRows ) {
-            FillColumnWithCandys(col);
-            $(".candy[cell^='" + col.toString() + "'].destroyCandy").remove();
-        }
     }
 }
 function BeginPlay(callBack) {
@@ -180,6 +172,14 @@ function _parseToPromise(value) {
     return new Promise(resolve => { resolve( (value == undefined || value == null) ? true : value ); });
 }
 
+async function RemoveAndCompleteCandys() {
+    await _parseToPromise($(".destroyCandy").detach());
+    for (let col = 1; col <= limitColums; col++) {
+        if ( $(".candy[cell^='" + col.toString() + "']:not(.destroyCandy)").toArray().length < limitRows ) {
+            await _parseToPromise(FillColumnWithCandys(col));
+        }
+    }
+}
 async function Drop(event, ui) {
     var Dragged = $(ui.helper), Dropping = $(event.target);
     var accepted = false;
@@ -220,8 +220,9 @@ async function Drop(event, ui) {
         $(Dropping).attr("cell", (colFrom.toString() + rowFrom.toString()));
 
         if ( await _parseToPromise(EvaluateCandyDroping(Dragged, colTo, rowTo)) || 
-             await _parseToPromise(EvaluateCandyDroping(Dropping, colFrom, rowFrom)) ) {
-            await Waiting(.3);
+             await _parseToPromise(EvaluateCandyDroping(Dropping, colFrom, rowFrom)) 
+        ) {
+            await Waiting(.5);
             MoveCount++;
             $("#movimientos-text").text(MoveCount.toString());
             TimerCandy(EvaluateCandys, .5, true);
