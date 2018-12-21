@@ -37,12 +37,16 @@ function captureCandySize() {
 function GetRandomCandy(colClass, isPrepend) {
     var col = parseInt($(colClass).attr("number"));
     var row = parseInt($(colClass+">.candy").toArray().length)+1;
-    var newCandyTag = "<img class='candy' src='image/" + GetRandomNumber(1, 5).toString() + ".png' />";
+    var newCandyTag = "<img class='candy init' src='image/" + GetRandomNumber(1, 5).toString() + ".png' />";
     var candyTag = isPrepend? $(newCandyTag).prependTo($(colClass)) : $(newCandyTag).appendTo($(colClass));
-    $(candyTag).attr("cell", col.toString() + row.toString());
-    captureCandySize()
-    ;
-    $(candyTag).draggable({
+    AsignCandyProperties(candyTag, col, row);
+
+    return candyTag;
+}
+function AsignCandyProperties(candy, col, row) {
+    $(candy).attr("cell", col.toString() + row.toString());
+    captureCandySize();
+    $(candy).draggable({
         snap: ".candy",
         snapMode: "inner",
         snapTolerance: (_candySize._left/2),
@@ -50,12 +54,10 @@ function GetRandomCandy(colClass, isPrepend) {
         revert: "invalid",
         revertDuration: 200,
     });
-    $(candyTag).droppable({
+    $(candy).droppable({
         accept: ".candy",
         drop: Drop
     });
-
-    return candyTag;
 }
 function ApplyAnimationHorizontal(candyElem, orientation, multiply) {
     $(candyElem).animate({
@@ -177,15 +179,43 @@ function Waiting(seconds) {
 function _parseToPromise(value) {
     return new Promise(resolve => { resolve( (value == undefined || value == null) ? true : value ); });
 }
-
-async function RemoveAndCompleteCandys() {
-    await _parseToPromise($(".destroyCandy").detach());
-    for (let col = 1; col <= limitColums; col++) {
-        if ( $(".candy[cell^='" + col.toString() + "']:not(.destroyCandy)").toArray().length < limitRows ) {
-            await _parseToPromise(FillColumnWithCandys(col));
+function reLoadColumn(col) {
+    var elements = [];
+    for (let row = 1; row <= limitRows; row++) {
+        const candy = $(".candy[cell='" + col.toString() + row.toString() + "']");
+        if ($(candy).length > 0) {
+            elements.push(ExtracImageName($(candy).attr("src").toString()));
         }
     }
+
+    $(".candy[cell^='" + col.toString() + "']").remove();
+
+    for(let row = elements.length; row >= 1; row--) {
+        ReinitializeCandy(elements[row-1], col, row, true);
+    }
 }
+function Timing() {
+    currSeconds--;
+    if (currSeconds == 0 && currMinutes > 0) currSeconds = 60;
+    if (currSeconds == 60) { currMinutes--; currSeconds--; }
+
+    if (currMinutes == 0 && currSeconds <= 10) {
+        if (!$("#timer").hasClass("warning")) $("#timer").addClass("warning");
+    }
+
+    var impTime = Lpad(currMinutes.toString(), '0') + ":" + Lpad(currSeconds.toString(), '0');
+    $("#timer").text(impTime);
+    if ( currMinutes <= 0 && currSeconds <= 0 ) {
+        $("#timer").removeClass("warning");
+        clearInterval(timer);
+    }
+}
+function Lpad(n, z) {
+    z = z || '0';
+    n = n + '';
+    return n.length >= 2 ? n : new Array(2 - n.length + 1).join(z) + n;
+}
+
 async function Drop(event, ui) {
     var Dragged = $(ui.helper), Dropping = $(event.target);
     var accepted = false;
@@ -230,9 +260,11 @@ async function Drop(event, ui) {
         ) {
             clearInterval(timer);
             await Waiting(.5);
+            await _parseToPromise(reLoadColumn(colTo));
+            if ( colFrom != colTo ) await _parseToPromise(reLoadColumn(colFrom));
             MoveCount++;
             $("#movimientos-text").text(MoveCount.toString());
-            await TimerCandy(EvaluateCandys, .8, true);
+            await TimerCandy(EvaluateCandys, 1, false);
             timer = setInterval(Timing, 1000);
         } else {
             $(Dragged).attr("cell", (colFrom.toString() + rowFrom.toString()));
@@ -248,13 +280,8 @@ async function Drop(event, ui) {
         }
     }
 }
-async function TimerCandy(callFunc, seconds, awaitFirst) {
-    if ( awaitFirst ) await Waiting(seconds);
-    while (await _parseToPromise(callFunc())) {
-        await Waiting(seconds);
-    }
-}
 async function EvaluateCandys() {
+    $(".candy.init").removeClass("init");
     var col=1, candysDestroying, _destroying;
     while ( col <= limitColums ) {
         var row=1;
@@ -278,27 +305,27 @@ async function EvaluateCandys() {
     $("#score-text").text(CandyPoints.toString());
     return _destroying;
 }
+async function ReinitializeCandy(image, col, row, isPrepend) {
+    var colClass = ".col-" + col.toString();
+    var newCandyTag = "<img class='candy' src='image/" + image.toString() + ".png' />";
+    var candyTag = isPrepend? $(newCandyTag).prependTo($(colClass)) : $(newCandyTag).appendTo($(colClass));
+    await _parseToPromise(AsignCandyProperties(candyTag, col, row));
 
-function Timing() {
-    currSeconds--;
-    if (currSeconds == 0 && currMinutes > 0) currSeconds = 60;
-    if (currSeconds == 60) { currMinutes--; currSeconds--; }
-
-    if (currMinutes == 0 && currSeconds <= 10) {
-        if (!$("#timer").hasClass("warning")) $("#timer").addClass("warning");
-    }
-
-    var impTime = lpad(currMinutes.toString(), '0') + ":" + lpad(currSeconds.toString(), '0');
-    $("#timer").text(impTime);
-    if ( currMinutes == 0 && currSeconds == 0 ) {
-        $("#timer").removeClass("warning");
-        clearInterval(timer);
+    return candyTag;
+}
+async function RemoveAndCompleteCandys() {
+    await _parseToPromise($(".destroyCandy").detach());
+    for (let col = 1; col <= limitColums; col++) {
+        if ( $(".candy[cell^='" + col.toString() + "']:not(.destroyCandy)").toArray().length < limitRows ) {
+            await _parseToPromise(FillColumnWithCandys(col));
+        }
     }
 }
-function lpad(n, z) {
-    z = z || '0';
-    n = n + '';
-    return n.length >= 2 ? n : new Array(2 - n.length + 1).join(z) + n;
+async function TimerCandy(callFunc, seconds, awaitFirst) {
+    if ( awaitFirst ) await Waiting(seconds);
+    while (await _parseToPromise(callFunc())) {
+        await Waiting(seconds);
+    }
 }
 
 $(document).ready(function() {

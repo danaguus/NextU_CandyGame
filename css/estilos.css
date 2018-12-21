@@ -111,10 +111,11 @@ div[class^='col-'] {
   width: 80%;
   height: 11.29%;
   margin: 1vh .8vw !important;
+}
+.candy.init {
   animation-name: kf-SlideDown;
   animation-duration: .75s;
   animation-fill-mode: backwards;
-  transition: transform .8s;
 }
 .destroyCandy {
   animation-name: kf-destroying;
