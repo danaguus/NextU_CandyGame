@@ -122,6 +122,13 @@ div[class^='col-'] {
   animation-fill-mode: backwards;
   opacity: 0;
 }
+.warning {
+  animation-name: kf-warning;
+  animation-direction: alternate;
+  animation-fill-mode: backwards;
+  animation-duration: .5s;
+  animation-iteration-count: infinite;
+}
 
 @keyframes kf-brightness {
   0% {
@@ -187,5 +194,19 @@ div[class^='col-'] {
   100% {
     opacity: 0;
     transform: scale(0);
+  }
+}
+@keyframes kf-warning {
+  0% {
+    color: #E8CA06;
+    transform: scale(1);
+  }
+  50% {
+    color: #FFFFFF;
+    transform: scale(.9);
+  }
+  100% {
+    color: #E8CA06;
+    transform: scale(1);
   }
 }

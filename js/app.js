@@ -8,6 +8,10 @@ var _candySize = {
     _captured: false
 }
 
+var currMinutes;
+var currSeconds;
+var timer;
+
 function GetRandomNumber(star, end) {
     return  parseInt(star != undefined && star != null && end != undefined && end != null ? 
             Math.random() * (star - end) + end : Math.random());
@@ -42,7 +46,9 @@ function GetRandomCandy(colClass, isPrepend) {
         snap: ".candy",
         snapMode: "inner",
         snapTolerance: (_candySize._left/2),
-        stack: ".candy"
+        stack: ".candy",
+        revert: "invalid",
+        revertDuration: 200,
     });
     $(candyTag).droppable({
         accept: ".candy",
@@ -159,7 +165,7 @@ function BeginPlay(callBack) {
         col++;
     }
 
-    TimerCandy(callBack, 1, true);
+    return _parseToPromise(TimerCandy(callBack, 1, true));
 }
 function Waiting(seconds) {
     return new Promise(resolve => {
@@ -222,10 +228,12 @@ async function Drop(event, ui) {
         if ( await _parseToPromise(EvaluateCandyDroping(Dragged, colTo, rowTo)) || 
              await _parseToPromise(EvaluateCandyDroping(Dropping, colFrom, rowFrom)) 
         ) {
+            clearInterval(timer);
             await Waiting(.5);
             MoveCount++;
             $("#movimientos-text").text(MoveCount.toString());
-            TimerCandy(EvaluateCandys, .5, true);
+            await TimerCandy(EvaluateCandys, .8, true);
+            timer = setInterval(Timing, 1000);
         } else {
             $(Dragged).attr("cell", (colFrom.toString() + rowFrom.toString()));
             $(Dropping).attr("cell", (colTo.toString() + rowTo.toString()));
@@ -247,7 +255,7 @@ async function TimerCandy(callFunc, seconds, awaitFirst) {
     }
 }
 async function EvaluateCandys() {
-    var col=1, candysDestroying;
+    var col=1, candysDestroying, _destroying;
     while ( col <= limitColums ) {
         var row=1;
         while( row <= limitRows ) {
@@ -260,6 +268,7 @@ async function EvaluateCandys() {
     }
 
     candysDestroying = $(".destroyCandy").length;
+    _destroying = (candysDestroying > 0);
 
     await Waiting(1.7);
     await _parseToPromise(RemoveAndCompleteCandys());
@@ -267,18 +276,44 @@ async function EvaluateCandys() {
     CandyPoints += (candysDestroying * 3);
 
     $("#score-text").text(CandyPoints.toString());
+    return _destroying;
+}
 
-    return (candysDestroying > 0);
+function Timing() {
+    currSeconds--;
+    if (currSeconds == 0 && currMinutes > 0) currSeconds = 60;
+    if (currSeconds == 60) { currMinutes--; currSeconds--; }
+
+    if (currMinutes == 0 && currSeconds <= 10) {
+        if (!$("#timer").hasClass("warning")) $("#timer").addClass("warning");
+    }
+
+    var impTime = lpad(currMinutes.toString(), '0') + ":" + lpad(currSeconds.toString(), '0');
+    $("#timer").text(impTime);
+    if ( currMinutes == 0 && currSeconds == 0 ) {
+        $("#timer").removeClass("warning");
+        clearInterval(timer);
+    }
+}
+function lpad(n, z) {
+    z = z || '0';
+    n = n + '';
+    return n.length >= 2 ? n : new Array(2 - n.length + 1).join(z) + n;
 }
 
 $(document).ready(function() {
-    $(".btn-reinicio").on("click", function() {
+    $(".btn-reinicio").on("click", async function() {
+        clearInterval(timer);
         $(this).text("Reiniciar");
         CandyPoints = 0;
         MoveCount = 0;
         $("#score-text").text(CandyPoints.toString());
         $("#movimientos-text").text(MoveCount.toString());
+        $("#timer").text("02:00");
         _candySize._captured = false;
-        BeginPlay(EvaluateCandys);
+        await _parseToPromise(BeginPlay(EvaluateCandys));
+        currMinutes = 1;
+        currSeconds = 60;
+        timer = setInterval(Timing, 1000);
     });
 });
