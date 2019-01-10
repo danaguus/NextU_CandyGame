@@ -7,7 +7,7 @@ var _candySize = {
     _left: undefined,
     _captured: false
 }
-
+var isBlocked = false;
 var currMinutes;
 var currSeconds;
 var timer;
@@ -55,7 +55,9 @@ function AsignCandyProperties(candy, col, row) {
         revertDuration: 200,
     });
     $(candy).droppable({
-        accept: ".candy",
+        accept: function() {
+            return !isBlocked;
+        },
         drop: Drop
     });
 }
@@ -166,8 +168,7 @@ function BeginPlay(callBack) {
         }
         col++;
     }
-
-    return _parseToPromise(TimerCandy(callBack, 1, true));
+    return _parseToPromise(TimerCandy(callBack, .8, true));
 }
 function Waiting(seconds) {
     return new Promise(resolve => {
@@ -195,19 +196,31 @@ function reLoadColumn(col) {
     }
 }
 function Timing() {
-    currSeconds--;
-    if (currSeconds == 0 && currMinutes > 0) currSeconds = 60;
-    if (currSeconds == 60) { currMinutes--; currSeconds--; }
+    if (!isBlocked) {
+        currSeconds--;
+        if (currSeconds == 0 && currMinutes > 0) currSeconds = 60;
+        if (currSeconds == 60) { currMinutes--; currSeconds--; }
 
-    if (currMinutes == 0 && currSeconds <= 10) {
-        if (!$("#timer").hasClass("warning")) $("#timer").addClass("warning");
-    }
+        if (currMinutes == 0 && currSeconds <= 10) {
+            if (!$("#timer").hasClass("warning")) $("#timer").addClass("warning");
+        }
 
-    var impTime = Lpad(currMinutes.toString(), '0') + ":" + Lpad(currSeconds.toString(), '0');
-    $("#timer").text(impTime);
-    if ( currMinutes <= 0 && currSeconds <= 0 ) {
-        $("#timer").removeClass("warning");
-        clearInterval(timer);
+        var impTime = Lpad(currMinutes.toString(), '0') + ":" + Lpad(currSeconds.toString(), '0');
+        $("#timer").text(impTime);
+        if ( currMinutes <= 0 && currSeconds <= 0 ) {
+            $("#timer").removeClass("warning");
+            clearInterval(timer);
+            isBlocked = true;
+
+            $(".main-titulo").hide("blind", {}, 800);
+            $(".time").hide("slide", {}, 500);
+            $(".panel-tablero").hide("slide", {}, 1000, async function() {
+                $(".panel-score").prepend("<div id='final-msg'>Juego terminado</div>");
+                await Waiting(.5);
+                $(".panel-score").addClass("full", 1200, function() {
+                });
+            });
+        }
     }
 }
 function Lpad(n, z) {
@@ -223,7 +236,7 @@ async function Drop(event, ui) {
     var rowFrom = parseInt($(Dragged).attr("cell").substring(ROW,ROW+1)), rowTo = parseInt($(Dropping).attr("cell").substring(ROW,ROW+1));
     var colFrom = parseInt($(Dragged).attr("cell").substring(COL,COL+1)), colTo = parseInt($(Dropping).attr("cell").substring(COL,COL+1));
 
-    if ( rowFrom == rowTo ) {
+    if ( rowFrom == rowTo && $(Dropping).hasClass("candy") ) {
         if ( colFrom == (colTo-1)) {
             accepted = ApplyAnimationHorizontal(Dropping, "-", 1);
         } else if (colFrom == (colTo+1)) {
@@ -231,7 +244,7 @@ async function Drop(event, ui) {
         } else {
             ApplyAnimationHorizontal(Dragged, colFrom > colTo ? "+" : "-", colFrom > colTo ? (colFrom-colTo) : (colTo-colFrom));
         }
-    } else if ( colFrom == colTo ) {
+    } else if ( colFrom == colTo && $(Dropping).hasClass("candy") ) {
         if ( rowFrom == (rowTo-1)) {
             accepted = ApplyAnimationVertical(Dropping, "-", 1);
         } else if (rowFrom == (rowTo+1)) {
@@ -258,14 +271,12 @@ async function Drop(event, ui) {
         if ( await _parseToPromise(EvaluateCandyDroping(Dragged, colTo, rowTo)) || 
              await _parseToPromise(EvaluateCandyDroping(Dropping, colFrom, rowFrom)) 
         ) {
-            clearInterval(timer);
             await Waiting(.5);
             await _parseToPromise(reLoadColumn(colTo));
             if ( colFrom != colTo ) await _parseToPromise(reLoadColumn(colFrom));
             MoveCount++;
             $("#movimientos-text").text(MoveCount.toString());
             await TimerCandy(EvaluateCandys, 1, false);
-            timer = setInterval(Timing, 1000);
         } else {
             $(Dragged).attr("cell", (colFrom.toString() + rowFrom.toString()));
             $(Dropping).attr("cell", (colTo.toString() + rowTo.toString()));
@@ -281,6 +292,7 @@ async function Drop(event, ui) {
     }
 }
 async function EvaluateCandys() {
+    isBlocked = false;
     $(".candy.init").removeClass("init");
     var col=1, candysDestroying, _destroying;
     while ( col <= limitColums ) {
@@ -288,21 +300,24 @@ async function EvaluateCandys() {
         while( row <= limitRows ) {
             var candy = $(".candy[cell='" + col.toString() + row.toString() + "']");
             $(candy).css("animation-delay", "0s");
-            if ( await _parseToPromise(EvaluateCandyDroping(candy, col, row)) ) { $(candy).addClass("destroyCandy"); }
+            if ( await _parseToPromise(EvaluateCandyDroping(candy, col, row)) ) {
+                $(candy).addClass("destroyCandy"); 
+                if ( !isBlocked ) isBlocked = true;
+            }
             row++;
         }
         col++;
     }
-
     candysDestroying = $(".destroyCandy").length;
     _destroying = (candysDestroying > 0);
 
     await Waiting(1.7);
     await _parseToPromise(RemoveAndCompleteCandys());
 
-    CandyPoints += (candysDestroying * 3);
+    CandyPoints += (candysDestroying * 9);
 
     $("#score-text").text(CandyPoints.toString());
+
     return _destroying;
 }
 async function ReinitializeCandy(image, col, row, isPrepend) {
@@ -330,6 +345,15 @@ async function TimerCandy(callFunc, seconds, awaitFirst) {
 
 $(document).ready(function() {
     $(".btn-reinicio").on("click", async function() {
+        $("#final-msg").remove();
+        $(".panel-score").removeClass("full", 1200, async function() {
+            $(".panel-tablero").show("slide", {}, 1000, function() {});
+            await Waiting(.5);
+            $(".main-titulo").show("blind", {}, 800);
+            $(".time").show("slide", {}, 500);
+        });
+
+        isBlocked = true;
         clearInterval(timer);
         $(this).text("Reiniciar");
         CandyPoints = 0;
@@ -339,6 +363,7 @@ $(document).ready(function() {
         $("#timer").text("02:00");
         _candySize._captured = false;
         await _parseToPromise(BeginPlay(EvaluateCandys));
+        isBlocked = false;
         currMinutes = 1;
         currSeconds = 60;
         timer = setInterval(Timing, 1000);

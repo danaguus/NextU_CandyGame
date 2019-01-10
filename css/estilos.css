@@ -5,6 +5,16 @@
 *{
   box-sizing: border-box;
 }
+
+#final-msg {
+  font-family: gameFont;
+  font-size: 2.5em;
+  color: #DCFF0E;
+  justify-content: center;
+  text-align: center;
+  margin-top: 7%;
+}
+
 body{
   background-image: url('../image/background.jpg');
   background-size: cover;
@@ -129,6 +139,17 @@ div[class^='col-'] {
   animation-fill-mode: backwards;
   animation-duration: .5s;
   animation-iteration-count: infinite;
+}
+
+.full {
+  width: 95%;
+  height: 85%;
+  position: relative !important;
+  right: 0 !important;
+}
+.full>div:not(:last-child) {
+  height: 20.5%;
+  margin: 1%;
 }
 
 @keyframes kf-brightness {
